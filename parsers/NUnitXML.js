@@ -86,50 +86,51 @@ exports.handler = function ({ event: body, constants, triggers }, context, callb
 
         return testCases;
     }
-                
-        var payload = body;
-        var projectId = payload.projectId;
-        var cycleId = payload.testcycle;
-        var testLogs = [];
 
-        let testResults = Buffer.from(payload.result, 'base64').toString('ascii');
+    var payload = body;
+    var projectId = payload.projectId;
+    var cycleId = payload.testcycle;
+    var testLogs = [];
 
-        //console.log(testResults);
+    let testResults = Buffer.from(payload.result, 'base64').toString('ascii');
 
-        var parseString = require('xml2js').parseString;
-        var startTime = '';
-        var endTime = '';
+    //console.log(testResults);
 
-        parseString(testResults, {
-            preserveChildrenOrder: true,
-            explicitArray: false,
-            explicitChildren: false,
-            emptyTag: "..."
-        }, function (err, result) {
-            if (err) {
-                emitEvent('ChatOpsEvent', { Error: "Unexpected Error Parsing XML Document: " + err }); 
-                console.log(err);
+    var parseString = require('xml2js').parseString;
+    var startTime = '';
+    var endTime = '';
+
+    parseString(testResults, {
+        preserveChildrenOrder: true,
+        explicitArray: false,
+        explicitChildren: false,
+        emptyTag: "..."
+    }, function (err, result) {
+        if (err) {
+            emitEvent('ChatOpsEvent', { Error: "Unexpected Error Parsing XML Document: " + err });
+            console.log(err);
+        } else {
+            console.log('[INFO]: XML converted to JSON: \n' + JSON.stringify(result));
+            testRun = result['test-run'];
+            if (result['test-run']['test-suite']) {
+                var testsuites = Array.isArray(result['test-run']['test-suite']) ? result['test-run']['test-suite'] : [result['test-run']['test-suite']];
+                getCases(testsuites);
             } else {
-                console.log('[INFO]: XML converted to JSON: \n' + JSON.stringify(result));
-                testRun = result['test-run'];
-                if (result['test-run']['test-suite']) {
-                    var testsuites = Array.isArray(result['test-run']['test-suite']) ? result['test-run']['test-suite'] : [result['test-run']['test-suite']];
-                    getCases(testsuites);
-                    } else {
-                    console.log('Test Suites collection is empty, skipping.');
-                }
+                console.log('Test Suites collection is empty, skipping.');
+            }
         };
 
         var formattedResults = {
-            "projectId" : projectId,
+            "projectId": projectId,
             "testcycle": cycleId,
-            "logs" : testLogs
+            "logs": testLogs
         };
 
-        emitEvent('UpdateQTestWithFormattedResults', formattedResults );
+        emitEvent('UpdateQTestWithFormattedResults', formattedResults);
 
-});
+    });
 
-function htmlEntities(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}}
+    function htmlEntities(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+}
